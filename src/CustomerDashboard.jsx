@@ -134,7 +134,7 @@ export default function CustomerDashboard({ onNavigate, user }) {
         .hero-band{
           position:relative;
           width:100%;
-          height:260px;
+          height:200px;
           overflow:hidden;
           background:#2a2015;
         }
@@ -227,8 +227,9 @@ export default function CustomerDashboard({ onNavigate, user }) {
 
           {/* Hero title */}
           <div style={{textAlign:"center",marginTop:28}}>
-            <h1 style={{fontSize:44,fontWeight:700,color:"#fff",fontFamily:"'Cormorant Garamond',serif",letterSpacing:".04em",textShadow:"0 2px 16px rgba(0,0,0,.45)",lineHeight:1}}>ParkErra System</h1>
-            <p style={{fontSize:14,color:"rgba(255,255,255,.85)",fontFamily:"'Jost',sans-serif",fontWeight:300,letterSpacing:".1em",marginTop:8,textShadow:"0 1px 8px rgba(0,0,0,.4)"}}>your Smart Parking Solution</p>
+            <h1 style={{fontSize:44,fontWeight:700,color:"#fff",fontFamily:"'Cormorant Garamond',serif",letterSpacing:".04em",textShadow:"0 2px 16px rgba(0,0,0,.45)",lineHeight:1}}>ParkGO System</h1>
+            <p style={{fontSize:14,color:"rgba(255,255,255,.85)",fontFamily:"'Jost',sans-serif",fontWeight:300,letterSpacing:".1em",marginTop:8,textShadow:"0 1px 8px rgba(0,0,0,.4)"}}>your Smart Parking Solution
+            </p>
           </div>
         </div>
       </div>
@@ -254,8 +255,8 @@ export default function CustomerDashboard({ onNavigate, user }) {
         ══════════════════════════════════════════════ */}
         {page==="home" && (
           <div style={{paddingBottom:48,paddingTop:0}}>
-            {/* Action cards – pulled up to overlap hero */}
-            <div style={{...fly(80),display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:22,marginTop:-60,marginBottom:28}}>
+            {/* Action cards – directly under the image */}
+            <div style={{...fly(80),display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:22,marginTop:-20,marginBottom:28}}>
               {/* Reserve */}
               <div className="action-card" onClick={()=>goTo("reserve")}>
                 <h3 style={{fontSize:28,fontWeight:700,color:"#9a8c5a",fontFamily:"'Cormorant Garamond',serif",letterSpacing:".01em",lineHeight:1.15}}>Reserve<br/>Parking</h3>

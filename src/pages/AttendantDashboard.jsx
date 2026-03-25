@@ -1,5 +1,5 @@
 import { useState } from "react";
-import bgImage from "../images/mangerDASH.jpeg";
+import bgImage from "../images/resreve.jpeg";
 
 // ─── MOCK DATA ────────────────────────────────────────────────────────────────
 const MOCK_SUBSCRIBERS = [
