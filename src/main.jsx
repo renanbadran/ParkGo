@@ -5,6 +5,10 @@ import App from "./pages/App.jsx";
 import { AuthProvider } from './context/AuthContext'
 import { BookingProvider } from './context/BooKingContext'
 
+import { supabase } from './supabaseClient'
+
+console.log('supabase connected:', supabase)
+
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <AuthProvider>

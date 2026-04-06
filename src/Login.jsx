@@ -1,4 +1,6 @@
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
+import carImg from "./images/car0.jpeg";
+import { supabase } from "./supabaseClient";
 
 function Particles() {
   const ref = useRef(null);
@@ -15,8 +17,6 @@ function Particles() {
   },[]);
   return <canvas ref={ref} style={{position:"fixed",inset:0,zIndex:0,pointerEvents:"none"}}/>;
 }
-
-import { loginUser } from "./Userstore";
 
 export default function Login({ onNavigate, onLogin }) {
   const [email, setEmail]       = useState("");
@@ -114,16 +114,43 @@ export default function Login({ onNavigate, onLogin }) {
             </div>
           )}
 
-          <button className="btn-main" onClick={()=>{
-            if (!email || !password) { setErrMsg("Please enter email and password."); return; }
-            setErrMsg(""); setLoading(true);
-            setTimeout(() => {
-              const result = loginUser({ email, password });
+          <button
+            className="btn-main"
+            onClick={async () => {
+              if (!email || !password) {
+                setErrMsg("Please enter email and password.");
+                return;
+              }
+
+              setErrMsg("");
+              setLoading(true);
+
+              const { data, error } = await supabase.auth.signInWithPassword({
+                email,
+                password
+              });
+
               setLoading(false);
-              if (!result.success) { setErrMsg(result.message); return; }
-              if (onLogin) onLogin(result.user);
-            }, 1200);
-          }} disabled={loading}>
+
+              if (error) {
+                setErrMsg(error.message);
+                return;
+              }
+
+              const user = data.user;
+              const role = user?.user_metadata?.role || "customer";
+
+              const loggedUser = {
+                id: user.id,
+                email: user.email,
+                name: user.user_metadata?.full_name || user.email,
+                role: role
+              };
+
+              if (onLogin) onLogin(loggedUser);
+            }}
+            disabled={loading}
+          >
             {loading
               ? <span style={{display:"inline-flex",alignItems:"center",gap:10}}><span style={{width:16,height:16,border:"2px solid rgba(255,255,255,.35)",borderTopColor:"#fff",borderRadius:"50%",display:"inline-block",animation:"spin .7s linear infinite"}}/>Signing in...</span>
               : "Sign In →"}
