@@ -1,18 +1,8 @@
-import { useState } from "react";
-import bgImage from "../images/pick1.jpeg";
-
-/* ── Mock Data ── */
-const MOCK_SUBSCRIBERS = [
-  { id: 16, username: "renan badran", firstName: "renan",  lastName: "Badran", email: "renankabh@......", phone: "053918.....", registration: "2026-03-8",  delays: 0, status: "active" },
-  { id: 17, username: "ahmed khalil", firstName: "Ahmed",  lastName: "Khalil", email: "ahmed@.......",    phone: "052100.....", registration: "2026-02-14", delays: 1, status: "active" },
-  { id: 18, username: "sara nasser",  firstName: "Sara",   lastName: "Nasser", email: "sara@........",   phone: "054200.....", registration: "2026-01-20", delays: 0, status: "active" },
-];
-
-const MOCK_PARKED_CARS = [
-  { code: 1, space: 1, startTime: "2025-11-28 15:27", endTime: "2025-11-28 15:27" },
-  { code: 2, space: 3, startTime: "2026-03-18 09:00", endTime: "2026-03-18 11:00" },
-  { code: 3, space: 7, startTime: "2026-03-19 14:30", endTime: "2026-03-19 16:30" },
-];
+import { useEffect, useState } from "react";
+import bgImage from "../../images/pick1.jpeg";
+import { parkingService } from "../../services/parking.service";
+import { reportService } from "../../services/report.service";
+import { subscriberService } from "../../services/subscriber.service";
 
 /* ── Shared CSS ── */
 const G = `
@@ -302,14 +292,28 @@ const G = `
 `;
 
 /* ── Shared Header ─────────────────────────────────────────── */
-function Header({ title, subtitle }) {
+const getManagerName = (user) => {
+  const fullName = user?.fullName || user?.name;
+  const firstLastName = `${user?.firstName || ""} ${user?.lastName || ""}`.trim();
+  return fullName || firstLastName || user?.firstName || user?.email || "Manager";
+};
+
+const getManagerRoleLabel = (user) => user?.userType || user?.role || "manager";
+
+const getAvatarLabel = (name) => name.charAt(0).toUpperCase();
+
+function Header({ title, subtitle, user }) {
+  const managerName = getManagerName(user);
+  const roleLabel = getManagerRoleLabel(user);
+  const avatarLabel = user?.avatar || getAvatarLabel(managerName);
+
   return (
     <>
       <div className="mg-topbar">
-        <div className="mg-avatar">👩</div>
+        <div className="mg-avatar">{avatarLabel}</div>
         <div>
-          <div className="mg-user-name">hello, Mohamed</div>
-          <div className="mg-user-role">Manger</div>
+          <div className="mg-user-name">hello, {managerName}</div>
+          <div className="mg-user-role">{roleLabel}</div>
         </div>
         <div className="mg-spacer" />
         <div className="mg-sys-title">ParkGo System</div>
@@ -323,7 +327,7 @@ function Header({ title, subtitle }) {
 }
 
 /* ── SCREEN 1: Manager Dashboard ───────────────────────────── */
-function ManagerHome({ onNavigate }) {
+function ManagerHome({ onNavigate, user }) {
   const buttons = [
     { icon: "➕", label: "Add  Facality",            key: null,           hasStatus: true  },
     { icon: "🗑️", label: "Remove Facality",          key: null,           hasStatus: true  },
@@ -336,7 +340,7 @@ function ManagerHome({ onNavigate }) {
     <div className="mg-wrap">
       <style>{G}</style>
       <div className="mg-inner">
-        <Header title="Manager Dashboard" subtitle="Comprehensive Management Control" />
+        <Header title="Manager Dashboard" subtitle="Comprehensive Management Control" user={user} />
 
         <div style={{ width: "100%", maxWidth: 560 }}>
           {buttons.map((btn, i) => (
@@ -364,18 +368,39 @@ function ManagerHome({ onNavigate }) {
 }
 
 /* ── SCREEN 2: View Subscribers ────────────────────────────── */
-function ViewSubscribers({ onBack }) {
+function ViewSubscribers({ onBack, user }) {
   const [searchId, setSearchId] = useState("");
-  const [displayed, setDisplayed] = useState(MOCK_SUBSCRIBERS);
+  const [subscribers, setSubscribers] = useState([]);
+  const [displayed, setDisplayed] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    let alive = true;
+
+    subscriberService
+      .list()
+      .then((items) => {
+        if (!alive) return;
+        setSubscribers(items);
+        setDisplayed(items);
+      })
+      .catch((err) => alive && setError(err.message))
+      .finally(() => alive && setLoading(false));
+
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   const handleSearch = () => {
     if (!searchId.trim()) return;
-    setDisplayed(MOCK_SUBSCRIBERS.filter(s => String(s.id) === searchId.trim()));
+    setDisplayed(subscribers.filter(s => String(s.id) === searchId.trim()));
   };
 
   const handleShowAll = () => {
     setSearchId("");
-    setDisplayed(MOCK_SUBSCRIBERS);
+    setDisplayed(subscribers);
   };
 
   const COLS = ["ID", "User name", "First name", "Last name", "Email", "Phone", "Registion", "Delays", "Status"];
@@ -385,9 +410,15 @@ function ViewSubscribers({ onBack }) {
     <div className="mg-wrap">
       <style>{G}</style>
       <div className="mg-inner">
-        <Header title="Subscribers Managment" subtitle="View And Search Subscriber Information" />
+        <Header title="Subscribers Managment" subtitle="View And Search Subscriber Information" user={user} />
 
         <div className="mg-card">
+          {(loading || error) && (
+            <div style={{ marginBottom: 14, color: error ? "#b04545" : "#4a6a7a", fontWeight: 700 }}>
+              {loading ? "Loading subscribers from server..." : error}
+            </div>
+          )}
+
           <div className="mg-search-row">
             <span className="mg-search-label">Search by Subscriber ID :</span>
             <input
@@ -436,23 +467,46 @@ function ViewSubscribers({ onBack }) {
 }
 
 /* ── SCREEN 3: View Parked Cars (Parking Records) ──────────── */
-function ViewParkedCars({ onBack }) {
+function ViewParkedCars({ onBack, user }) {
+  const [parkings, setParkings] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const COLS = ["Parking Code", "Parking Space", "Start Time", "End Time"];
-  const EMPTY = 5;
+  const EMPTY = Math.max(0, 5 - parkings.length);
+
+  useEffect(() => {
+    let alive = true;
+
+    parkingService
+      .list()
+      .then((items) => alive && setParkings(items))
+      .catch((err) => alive && setError(err.message))
+      .finally(() => alive && setLoading(false));
+
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   return (
     <div className="mg-wrap">
       <style>{G}</style>
       <div className="mg-inner">
-        <Header title="Parking Records" subtitle="View And Search Parking Information" />
+        <Header title="Parking Records" subtitle="View And Search Parking Information" user={user} />
 
         <div className="mg-card">
+          {(loading || error) && (
+            <div style={{ marginBottom: 14, color: error ? "#b04545" : "#4a6a7a", fontWeight: 700 }}>
+              {loading ? "Loading parking records from server..." : error}
+            </div>
+          )}
+
           <table className="mg-table">
             <thead>
               <tr>{COLS.map(c => <th key={c} className="center">{c}</th>)}</tr>
             </thead>
             <tbody>
-              {MOCK_PARKED_CARS.map((row, i) => (
+              {parkings.map((row, i) => (
                 <tr key={row.code} className={i === 0 ? "highlight" : ""}>
                   <td className="center">{row.code}</td>
                   <td className="center">{row.space}</td>
@@ -478,20 +532,33 @@ function ViewParkedCars({ onBack }) {
 }
 
 /* ── SCREEN 4: View Reports ────────────────────────────────── */
-function ViewReports({ onBack }) {
+function ViewReports({ onBack, user }) {
   const [form, setForm] = useState({ date: "", month: "", year: "" });
   const [generated, setGenerated] = useState(false);
+  const [summary, setSummary] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  const handleGenerate = () => {
-    setGenerated(true);
-    setTimeout(() => setGenerated(false), 2500);
+  const handleGenerate = async () => {
+    setError("");
+    setLoading(true);
+
+    try {
+      const data = await reportService.summary();
+      setSummary(data);
+      setGenerated(true);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <div className="mg-wrap">
       <style>{G}</style>
       <div className="mg-inner">
-        <Header title="View Reports" subtitle="Generate  and View System Reports" />
+        <Header title="View Reports" subtitle="Generate  and View System Reports" user={user} />
 
         <div className="mg-card" style={{ maxWidth: 500 }}>
           <div className="mg-form-title">Report Configuration</div>
@@ -525,6 +592,22 @@ function ViewReports({ onBack }) {
             />
           </div>
 
+          {error && (
+            <div style={{
+              margin: "16px 0 0",
+              padding: "12px 16px",
+              borderRadius: 10,
+              background: "rgba(180,60,60,.08)",
+              border: "1.5px solid rgba(180,60,60,.25)",
+              textAlign: "center",
+              fontSize: 13,
+              fontWeight: 700,
+              color: "#8b3a3a"
+            }}>
+              {error}
+            </div>
+          )}
+
           {generated && (
             <div style={{
               margin: "16px 0 0",
@@ -541,8 +624,8 @@ function ViewReports({ onBack }) {
             </div>
           )}
 
-          <button className="mg-btn-generate" onClick={handleGenerate}>
-            Generate Report
+          <button className="mg-btn-generate" onClick={handleGenerate} disabled={loading}>
+            {loading ? "Generating..." : "Generate Report"}
           </button>
 
           <div className="mg-back-center">
@@ -555,15 +638,15 @@ function ViewReports({ onBack }) {
 }
 
 /* ── Root ──────────────────────────────────────────────────── */
-export default function ManagerDashboard({ onNavigate }) {
-  const [screen, setScreen] = useState("main");
+export default function ManagerDashboard({ onNavigate, user }) {
+  const [screen, setScreen] = useState("main");     //דף המנהל..
 
   const nav = key => key === "home" ? onNavigate("home") : setScreen(key);
   const back = () => setScreen("main");
 
-  if (screen === "subscribers") return <ViewSubscribers onBack={back} />;
-  if (screen === "parked")      return <ViewParkedCars  onBack={back} />;
-  if (screen === "reports")     return <ViewReports     onBack={back} />;
+  if (screen === "subscribers") return <ViewSubscribers onBack={back} user={user} />;  //מעברים..
+  if (screen === "parked")      return <ViewParkedCars  onBack={back} user={user} />;
+  if (screen === "reports")     return <ViewReports     onBack={back} user={user} />;
 
-  return <ManagerHome onNavigate={nav} />;
+  return <ManagerHome onNavigate={nav} user={user} />;
 }

@@ -1,40 +1,34 @@
 import { useState, useEffect, useRef } from "react";
-import ProfilePage from "./Profilepage";
-import heroBg from "./images/Car1.jpeg";
+import ProfilePage from "./ProfilePage";
+import heroBg from "../../images/Car1.jpeg";
 
-/* ── Mock Data ── */
-const MOCK_USER = { name: "Maya", role: "subscriber", avatar: "M" };
-const MOCK_HISTORY = [
-  { code: 12, space: 2, date: "2025-11-28 15:27", retrieval: "2025-11-28 15:27", confirmation: 4816, id: 11, ext: 0, max: 240, status: "completed" },
-  { code: 8,  space: 5, date: "2025-12-01 10:00", retrieval: "2025-12-01 12:00", confirmation: 3921, id: 14, ext: 1, max: 120, status: "active" },
-  { code: 15, space: 3, date: "2025-12-05 09:30", retrieval: "2025-12-05 11:30", confirmation: 5104, id: 17, ext: 0, max: 180, status: "cancelled" },
-];
+
 
 /* ── Main Component ── */
 export default function CustomerDashboard({ onNavigate, user }) {
-  const [currentUser, setCurrentUser] = useState(user || { name: "Renan", role: "subscriber", avatar: "G" });
-  const [page, setPage]         = useState("home");
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [vis, setVis]           = useState(false);
+  const [currentUser, setCurrentUser] = useState(user || { name: "subscriber", role: "subscriber", avatar: "G" });
+  const [page, setPage]         = useState("home"); // אנחנו בדף הראשי כבר, אז נתחיל ב-home
+  const [menuOpen, setMenuOpen] = useState(false);// תפריט הצד סגור כבר בהתחלה
+  const [vis, setVis]           = useState(false);// נשתמש בזה לאפקטים של כניסה חלקה לדפים
 
   // Reserve form
-  const [resDate, setResDate]   = useState("");
-  const [resTime, setResTime]   = useState("");
-  const [resMsg, setResMsg]     = useState("");
+  const [resDate, setResDate]   = useState("");// נתחיל עם שדות ריקים, המשתמש ימלא אותם
+  const [resTime, setResTime]   = useState("");// אותו דבר לשעה
+  const [resMsg, setResMsg]     = useState("");// הודעות שגיאה או הצלחה לאחר ניסיון הזמנה
 
   // Cancel form
-  const [cancelId, setCancelId] = useState("");
-  const [cancelMsg, setCancelMsg] = useState("");
+  const [cancelId, setCancelId] = useState("");// שדה להזנת מזהה ההזמנה לביטול
+  const [cancelMsg, setCancelMsg] = useState("");// הודעות שגיאה או הצלחה לאחר ניסיון ביטול
 
   // DropOff / PickUp
-  const [doPlate, setDoPlate]   = useState("");
-  const [doMsg, setDoMsg]       = useState("");
-  const [puCode, setPuCode]     = useState("");
-  const [puMsg, setPuMsg]       = useState("");
+  const [doPlate, setDoPlate]   = useState("");// שדה להזנת מספר הרכב בעת Drop Off
+  const [doMsg, setDoMsg]       = useState("");// הודעות שגיאה או הצלחה לאחר ניסיון Drop Off
+  const [puCode, setPuCode]     = useState("");// שדה להזנת קוד הוצאה
+  const [puMsg, setPuMsg]       = useState("");// הודעות שגיאה או הצלחה לאחר ניסיון Pick Up
 
   // Avatar quick change from topbar
   const avatarFileRef = useRef(null);
-  const handleTopbarAvatar = (e) => {
+  const handleTopbarAvatar = (e) => { // לשים תמונה..
     const file = e.target.files[0];
     if (!file) return;
     const reader = new FileReader();
@@ -45,21 +39,21 @@ export default function CustomerDashboard({ onNavigate, user }) {
   };
 
   useEffect(() => { setTimeout(() => setVis(true), 60); }, []);
-  useEffect(() => { setVis(false); setTimeout(() => setVis(true), 60); }, [page]);
+  useEffect(() => { setVis(false); setTimeout(() => setVis(true), 60); }, [page]); //RENDER בדל מתעדכן
 
-  const fly = (d=0) => ({
+  const fly = (d=0) => ({ // אפקט כניסה חלקה עם תזוזה קלה
     opacity: vis?1:0,
     transform: vis?"translateY(0) scale(1)":"translateY(18px) scale(.98)",
     transition:`opacity .45s ease ${d}ms, transform .45s ease ${d}ms`
   });
 
-  const goTo = (p) => { setMenuOpen(false); setPage(p); };
+  const goTo = (p) => { setMenuOpen(false); setPage(p); }; // פונקציה פשוטה לשינוי דפים וסגירת התפריט במקביל
 
   /* ── Handlers ── */
-  const handleReserve = () => {
+  const handleReserve = () => { //כפתור.. הזמנה
     if (!resDate || !resTime) { setResMsg("⚠ Please fill in all fields."); return; }
     setResMsg("✅ Spot reserved successfully! Confirmation sent.");
-    setTimeout(() => { setResMsg(""); setResDate(""); setResTime(""); setPage("home"); }, 2000);
+    setTimeout(() => { setResMsg(""); setResDate(""); setResTime(""); setPage("home"); }, 2000); // מזמין וחוזר לHOME אחרי 2 שניות
   };
   const handleCancel = () => {
     if (!cancelId) { setCancelMsg("⚠ Please enter your Reservation ID."); return; }
@@ -81,7 +75,7 @@ export default function CustomerDashboard({ onNavigate, user }) {
     setTimeout(() => setPuMsg(""), 3000);
   };
 
-  const statusColor = (s) => s==="active"?"#7a6a2a":s==="completed"?"#3d6b4f":"#8b3a3a";
+  const statusColor = (s) => s==="active"?"#7a6a2a":s==="completed"?"#3d6b4f":"#8b3a3a"; //צבע למצב ההזמנה
   const statusBg    = (s) => s==="active"?"rgba(180,160,80,.13)":s==="completed"?"rgba(80,160,100,.1)":"rgba(200,80,80,.1)";
 
   // Parking lot image (the Car1.jpeg user uploaded – use as base64 or public URL)

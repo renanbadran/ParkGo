@@ -1,18 +1,7 @@
-import { useState } from "react";
-import bgImage from "../images/resreve.jpeg";
-
-// ─── MOCK DATA ────────────────────────────────────────────────────────────────
-const MOCK_SUBSCRIBERS = [
-  { id: 16, username: "renan badran", firstName: "renan", lastName: "Badran", email: "renankabh@.....", phone: "053918.....", registration: "2026-03-8", delays: 0, status: "active" },
-  { id: 17, username: "ahmed khalil", firstName: "Ahmed", lastName: "Khalil", email: "ahmed@.....", phone: "052100.....", registration: "2026-02-14", delays: 1, status: "active" },
-  { id: 18, username: "sara nasser", firstName: "Sara", lastName: "Nasser", email: "sara@.....", phone: "054200.....", registration: "2026-01-20", delays: 0, status: "active" },
-];
-
-const MOCK_PARKED_CARS = [
-  { code: 1, space: 1, startTime: "2025-11-28 15:27", endTime: "2025-11-28 15:27" },
-  { code: 2, space: 3, startTime: "2026-03-18 09:00", endTime: "2026-03-18 11:00" },
-  { code: 3, space: 7, startTime: "2026-03-19 14:30", endTime: "2026-03-19 16:30" },
-];
+import { useEffect, useState } from "react";
+import bgImage from "../../images/resreve.jpeg";
+import { parkingService } from "../../services/parking.service";
+import { subscriberService } from "../../services/subscriber.service";
 
 // ─── SHARED STYLES ────────────────────────────────────────────────────────────
 const globalStyles = `
@@ -350,14 +339,28 @@ const globalStyles = `
 `;
 
 // ─── HEADER COMPONENT ─────────────────────────────────────────────────────────
-function PageHeader({ title, subtitle }) {
+const getAttendantName = (user) => {
+  const fullName = user?.fullName || user?.name;
+  const firstLastName = `${user?.firstName || ""} ${user?.lastName || ""}`.trim();
+  return fullName || firstLastName || user?.firstName || user?.email || "Attendant";
+};
+
+const getRoleLabel = (user) => user?.role || user?.userType || "attendant";
+
+const getAvatarLabel = (name) => name.charAt(0).toUpperCase();
+
+function PageHeader({ title, subtitle, user }) {
+  const attendantName = getAttendantName(user);
+  const roleLabel = getRoleLabel(user);
+  const avatarLabel = user?.avatar || getAvatarLabel(attendantName);
+
   return (
     <div className="pk-header" style={{ width: "100%", maxWidth: 700 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
-        <div className="pk-avatar">👩</div>
+        <div className="pk-avatar">{avatarLabel}</div>
         <div className="pk-user-info">
-          <div className="pk-user-name">hello, Omar</div>
-          <div className="pk-user-role">attendant</div>
+          <div className="pk-user-name">hello, {attendantName}</div>
+          <div className="pk-user-role">{roleLabel}</div>
         </div>
         <div style={{ flex: 1 }} />
         <div className="pk-system-title">ParkGO System</div>
@@ -369,7 +372,7 @@ function PageHeader({ title, subtitle }) {
 }
 
 // ─── SCREEN 1: MAIN DASHBOARD ─────────────────────────────────────────────────
-function MainDashboard({ onNavigate, onBackToHome }) {
+function MainDashboard({ onNavigate, onBackToHome, user }) {
   const buttons = [
     { label: "Register New Subscriber", key: "register", active: true },
     { label: "Parking facility maintenance", key: null, active: false },
@@ -383,7 +386,7 @@ function MainDashboard({ onNavigate, onBackToHome }) {
     <div className="pk-bg">
       <style>{globalStyles}</style>
       <div className="pk-content">
-        <PageHeader title="Attendant Dashboard" subtitle="Subscriber And Parking Mangement" />
+        <PageHeader title="Attendant Dashboard" subtitle="Subscriber And Parking Mangement" user={user} />
 
         <div style={{ marginTop: 24, width: "100%", maxWidth: 440 }}>
           {buttons.map((btn, i) => (
@@ -406,17 +409,33 @@ function MainDashboard({ onNavigate, onBackToHome }) {
 }
 
 // ─── SCREEN 2: REGISTER NEW SUBSCRIBER ───────────────────────────────────────
-function RegisterSubscriber({ onBack }) {
+function RegisterSubscriber({ onBack, user }) {
   const [form, setForm] = useState({ firstName: "", lastName: "", phone: "", email: "" });
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState("");
 
   const handleChange = (k, v) => setForm(f => ({ ...f, [k]: v }));
   const handleClear = () => setForm({ firstName: "", lastName: "", phone: "", email: "" });
+  const handleConfirm = async () => {
+    setSaving(true);
+    setMessage("");
+
+    try {
+      await subscriberService.create(form);
+      setMessage("Subscriber registered by server.");
+      handleClear();
+    } catch (err) {
+      setMessage(err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <div className="pk-bg">
       <style>{globalStyles}</style>
       <div className="pk-content">
-        <PageHeader title="Register new Subscriber" subtitle="Create a new subscriber account" />
+        <PageHeader title="Register new Subscriber" subtitle="Create a new subscriber account" user={user} />
 
         <div className="pk-card" style={{ marginTop: 24 }}>
           <div className="pk-form-title">Register information</div>
@@ -441,10 +460,18 @@ function RegisterSubscriber({ onBack }) {
             </div>
           </div>
 
+          {message && (
+            <div style={{ textAlign: "center", fontWeight: 700, marginTop: 8, color: message.includes("registered") ? "#2e7d32" : "#b04545" }}>
+              {message}
+            </div>
+          )}
+
           <div className="pk-bottom-bar">
             <button className="pk-btn-back pk-btn-red" onClick={onBack}>Back</button>
             <button className="pk-btn-back pk-btn-dark" onClick={handleClear}>clear</button>
-            <button className="pk-btn-back pk-btn-gold">confirm</button>
+            <button className="pk-btn-back pk-btn-gold" onClick={handleConfirm} disabled={saving}>
+              {saving ? "saving..." : "confirm"}
+            </button>
           </div>
         </div>
       </div>
@@ -453,19 +480,40 @@ function RegisterSubscriber({ onBack }) {
 }
 
 // ─── SCREEN 3: VIEW SUBSCRIBERS ──────────────────────────────────────────────
-function ViewSubscribers({ onBack }) {
+function ViewSubscribers({ onBack, user }) {
   const [searchId, setSearchId] = useState("");
-  const [displayed, setDisplayed] = useState(MOCK_SUBSCRIBERS);
+  const [subscribers, setSubscribers] = useState([]);
+  const [displayed, setDisplayed] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    let alive = true;
+
+    subscriberService
+      .list()
+      .then((items) => {
+        if (!alive) return;
+        setSubscribers(items);
+        setDisplayed(items);
+      })
+      .catch((err) => alive && setError(err.message))
+      .finally(() => alive && setLoading(false));
+
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   const handleSearch = () => {
     if (!searchId.trim()) return;
-    const found = MOCK_SUBSCRIBERS.filter(s => String(s.id) === searchId.trim());
+    const found = subscribers.filter(s => String(s.id) === searchId.trim());
     setDisplayed(found);
   };
 
   const handleShowAll = () => {
     setSearchId("");
-    setDisplayed(MOCK_SUBSCRIBERS);
+    setDisplayed(subscribers);
   };
 
   const cols = ["ID", "User name", "First name", "Last name", "Email", "Phone", "Registion", "Delays", "Status"];
@@ -474,9 +522,15 @@ function ViewSubscribers({ onBack }) {
     <div className="pk-bg">
       <style>{globalStyles}</style>
       <div className="pk-content">
-        <PageHeader title="Subscribers Managment" subtitle="View And Search Subscriber Information" />
+        <PageHeader title="Subscribers Managment" subtitle="View And Search Subscriber Information" user={user} />
 
         <div className="pk-card" style={{ marginTop: 24 }}>
+          {(loading || error) && (
+            <div style={{ marginBottom: 14, color: error ? "#b04545" : "#4a6a7a", fontWeight: 700 }}>
+              {loading ? "Loading subscribers from server..." : error}
+            </div>
+          )}
+
           <div className="pk-search-bar">
             <span className="pk-search-label">Search by Subscriber ID :</span>
             <input
@@ -526,22 +580,45 @@ function ViewSubscribers({ onBack }) {
 }
 
 // ─── SCREEN 4: VIEW PARKED CARS ───────────────────────────────────────────────
-function ViewParkedCars({ onBack }) {
+function ViewParkedCars({ onBack, user }) {
+  const [parkings, setParkings] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const cols = ["Parking Code", "Parking Space", "Start Time", "End Time"];
+
+  useEffect(() => {
+    let alive = true;
+
+    parkingService
+      .list()
+      .then((items) => alive && setParkings(items))
+      .catch((err) => alive && setError(err.message))
+      .finally(() => alive && setLoading(false));
+
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   return (
     <div className="pk-bg">
       <style>{globalStyles}</style>
       <div className="pk-content">
-        <PageHeader title="Parking Records" subtitle="View And Search Parking Information" />
+        <PageHeader title="Parking Records" subtitle="View And Search Parking Information" user={user} />
 
         <div className="pk-card" style={{ marginTop: 24 }}>
+          {(loading || error) && (
+            <div style={{ marginBottom: 14, color: error ? "#b04545" : "#4a6a7a", fontWeight: 700 }}>
+              {loading ? "Loading parking records from server..." : error}
+            </div>
+          )}
+
           <table className="pk-table">
             <thead>
               <tr>{cols.map(c => <th key={c} style={{ textAlign: "center" }}>{c}</th>)}</tr>
             </thead>
             <tbody>
-              {MOCK_PARKED_CARS.map((row, i) => (
+              {parkings.map((row, i) => (
                 <tr key={row.code} className={i === 0 ? "highlighted" : ""}>
                   <td style={{ textAlign: "center" }}>{row.code}</td>
                   <td style={{ textAlign: "center" }}>{row.space}</td>
@@ -550,7 +627,7 @@ function ViewParkedCars({ onBack }) {
                 </tr>
               ))}
               {/* Empty rows */}
-              {Array.from({ length: 5 }).map((_, i) => (
+              {Array.from({ length: Math.max(0, 5 - parkings.length) }).map((_, i) => (
                 <tr key={`e-${i}`}>
                   {cols.map((_, j) => <td key={j}>&nbsp;</td>)}
                 </tr>
@@ -568,14 +645,14 @@ function ViewParkedCars({ onBack }) {
 }
 
 // ─── ROOT APP ─────────────────────────────────────────────────────────────────
-export default function ParkErraDashboard({ onNavigate, onBackToHome }) {
-  const [screen, setScreen] = useState("main");
+export default function ParkErraDashboard({ onNavigate, onBackToHome, user }) {
+  const [screen, setScreen] = useState("main"); 
 
   const nav = (key) => setScreen(key);
   const back = () => setScreen("main");
 
-  if (screen === "register") return <RegisterSubscriber onBack={back} />;
-  if (screen === "subscribers") return <ViewSubscribers onBack={back} />;
-  if (screen === "parked") return <ViewParkedCars onBack={back} />;
-  return <MainDashboard onNavigate={nav} onBackToHome={onBackToHome} />;
+  if (screen === "register") return <RegisterSubscriber onBack={back} user={user} />;
+  if (screen === "subscribers") return <ViewSubscribers onBack={back} user={user} />;
+  if (screen === "parked") return <ViewParkedCars onBack={back} user={user} />;
+  return <MainDashboard onNavigate={nav} onBackToHome={onBackToHome} user={user} />;
 }
