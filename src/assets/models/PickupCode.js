@@ -1,1 +1,0 @@
-export { PickupCode } from "./PicupCode";
